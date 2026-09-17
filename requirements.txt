@@ -1,0 +1,46 @@
+# Pinned 2026-04-03 — PyPI latest stable at lock time.
+# robotframework-seleniumlibrary pulls selenium; explicit pin keeps CI/env aligned.
+
+# --- Robot + browser stack ---
+robotframework==7.4.2
+selenium==4.41.0
+robotframework-seleniumlibrary==6.8.0
+
+# --- Other Robot ecosystem ---
+robotframework-pabot==5.2.2
+robotframework-tidy==4.18.0
+robotframework-faker==6.0.0
+robotframework-requests==0.9.7
+allure-robotframework==2.15.3
+
+# --- Build / tooling ---
+setuptools==82.0.1
+GitPython>=3.1.40
+
+# --- Salesforce API data seeding ---
+simple-salesforce==1.12.6
+
+# --- Notifications ---
+requests>=2.31.0
+
+# --- App & AI ---
+python-dotenv==1.2.2
+streamlit==1.56.0
+Pillow>=10.0.0
+
+# LLM SDKs (all providers share openai client for compatible APIs)
+openai==2.30.0
+google-generativeai==0.8.6
+anthropic>=0.34.0
+cohere>=5.0.0
+
+# RF-MCP — stepwise test generation with live browser verification.
+# `[memory]` adds the persistent semantic-memory tools (sqlite-vec + model2vec)
+# so RF-MCP can recall prior locators, step sequences, and error→fix mappings
+# across sessions. Pinned because we exercise tool surfaces (execute_batch,
+# recall_*, get_locator_guidance) that landed in 0.30+.
+rf-mcp[memory]>=0.31.2
+
+# UI enhancements
+streamlit-option-menu>=0.4.0
+streamlit-antd-components>=0.3.2

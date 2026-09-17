@@ -1,0 +1,221 @@
+@import "tailwindcss";
+
+:root {
+  color-scheme: dark;
+  --neon-purple: #8B5CF6;
+  --neon-blue: #3B82F6;
+  --neon-cyan: #06B6D4;
+  --neon-pink: #EC4899;
+  --neon-green: #10B981;
+  --bg-dark: #0a0e1a;
+  --bg-card: rgba(255, 255, 255, 0.04);
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --text-primary: #E2E8F0;
+  --text-secondary: #94A3B8;
+}
+
+body {
+  background: var(--bg-dark);
+  color: var(--text-primary);
+  overflow-x: hidden;
+}
+
+/* Glassmorphism utility */
+.glass {
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+}
+
+.glass-strong {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+}
+
+/* Floating navbar needs to fully occlude scrolled content beneath it,
+   so use a near-opaque dark backdrop instead of the translucent glass. */
+.nav-floating {
+  background: rgba(10, 14, 26, 0.92);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
+}
+
+/* Hide the horizontal scrollbar inside the navbar -- the scroll itself still
+   works via touch / wheel if the content ever overflows on narrow screens,
+   but the WebKit / Chromium scrollbar UI was showing as a stripe under the
+   nav even when there was nothing to scroll, which made the nav look broken. */
+.nav-floating::-webkit-scrollbar {
+  display: none;
+}
+.nav-floating {
+  -ms-overflow-style: none;   /* IE / old Edge */
+  scrollbar-width: none;      /* Firefox */
+}
+
+/* Neon glow effects */
+.glow-purple { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3), 0 0 60px rgba(139, 92, 246, 0.1); }
+.glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.3), 0 0 60px rgba(6, 182, 212, 0.1); }
+.glow-pink { box-shadow: 0 0 20px rgba(236, 72, 153, 0.3), 0 0 60px rgba(236, 72, 153, 0.1); }
+
+.text-glow-purple { text-shadow: 0 0 20px rgba(139, 92, 246, 0.5); }
+.text-glow-cyan { text-shadow: 0 0 20px rgba(6, 182, 212, 0.5); }
+
+/* Animated gradient border */
+.gradient-border {
+  position: relative;
+  border-radius: 16px;
+  padding: 1px;
+  background: linear-gradient(135deg, var(--neon-purple), var(--neon-cyan), var(--neon-pink));
+  background-size: 200% 200%;
+  animation: gradient-shift 4s ease infinite;
+}
+.gradient-border > * {
+  background: var(--bg-dark);
+  border-radius: 15px;
+}
+
+@keyframes gradient-shift {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+/* Animated gradient background */
+.bg-gradient-animated {
+  background: linear-gradient(135deg, #0a0e1a 0%, #1a1040 25%, #0a1628 50%, #0f0a20 75%, #0a0e1a 100%);
+  background-size: 400% 400%;
+  animation: bg-shift 15s ease infinite;
+}
+@keyframes bg-shift {
+  0%, 100% { background-position: 0% 50%; }
+  25% { background-position: 100% 0%; }
+  50% { background-position: 100% 100%; }
+  75% { background-position: 0% 100%; }
+}
+
+/* Pulse animation */
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(139, 92, 246, 0.3); }
+  50% { box-shadow: 0 0 40px rgba(139, 92, 246, 0.6), 0 0 80px rgba(139, 92, 246, 0.2); }
+}
+.animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+
+/* Float animation */
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+}
+.animate-float { animation: float 3s ease-in-out infinite; }
+
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(139, 92, 246, 0.3); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(139, 92, 246, 0.5); }
+
+/* ---- App shell primitives ---- */
+.app-topbar {
+  background: rgba(10, 14, 26, 0.88);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-surface {
+  background: linear-gradient(180deg, rgba(8, 11, 24, 0.96) 0%, rgba(10, 14, 26, 0.9) 100%);
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.page-shell {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+  padding: 1.25rem 1.5rem 2rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.page-eyebrow {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #7dd3fc;
+  margin-bottom: 0.2rem;
+  font-weight: 600;
+}
+
+.page-title {
+  font-size: clamp(1.45rem, 2.2vw, 2rem);
+  line-height: 1.2;
+  font-weight: 700;
+  color: #f8fafc;
+}
+
+.page-description {
+  margin-top: 0.35rem;
+  color: #94a3b8;
+  font-size: 0.9rem;
+  max-width: 72ch;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.panel-surface {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 0.9rem;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-bottom: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.panel-title {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.panel-description {
+  color: #64748b;
+  font-size: 0.75rem;
+  margin-top: 0.18rem;
+}
+
+.section-grid-2 {
+  display: grid;
+  gap: 0.9rem;
+}
+
+@media (min-width: 1024px) {
+  .section-grid-2 {
+    grid-template-columns: 1.1fr 0.9fr;
+  }
+}
