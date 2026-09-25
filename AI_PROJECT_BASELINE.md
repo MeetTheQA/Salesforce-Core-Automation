@@ -1,8 +1,10 @@
-# Salesforce AI Automation Architect — Technical Baseline
+# Salesforce AI Automation — Technical Baseline
 
-This document describes the **legacy Streamlit** architecture, data flow, and capabilities of the *Salesforce AI Automation Architect*. It is intended for AI assistants and engineers onboarding to the repository.
+This document originally described the **legacy Streamlit** architecture. Prefer the current IDE path.
 
-> **Status note:** the user-facing UI is now **Next.js** (`frontend/`) talking to a **FastAPI** backend (`ai_qa_portal/backend/`). The Streamlit `app.py` described below still exists as a CLI / dev entry point but is not the primary interface. For the modern stack and the current LLM stack (Cursor SDK as default primary, with Gemini / OpenAI / Anthropic / Groq / Ollama / etc. as fallback chain), see [`README.md`](README.md), [`DEPLOY.md`](DEPLOY.md), [`docs/cursor-sdk-integration.md`](docs/cursor-sdk-integration.md), and [`docs/storage_layout.md`](docs/storage_layout.md).
+> **Status:** Primary interface is **IDE + FastAPI** (`ai_qa_portal/backend/`) via Feature Memory CLI. Browser UIs (Next.js, Streamlit) have been removed. See [`README.md`](README.md), [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md), [`DEPLOY.md`](DEPLOY.md), and [`docs/cursor-sdk-integration.md`](docs/cursor-sdk-integration.md).
+
+The sections below remain as historical context for root helpers (`app_*.py`, keyword catalog, pipeline) still used by some backend services.
 
 ---
 
@@ -10,7 +12,7 @@ This document describes the **legacy Streamlit** architecture, data flow, and ca
 
 The project turns **natural-language test intents** into **Robot Framework** `.robot` suites that drive **Salesforce Lightning** via **SeleniumLibrary**, using **shared Page Object (PO) keywords** and **GlobalKeywords**—not ad-hoc Selenium in generated tests.
 
-**Entry point (UI):** `streamlit run app.py` (project root).
+**Entry point (historical Streamlit):** removed. Use Feature Memory CLI + FastAPI — see [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md).
 
 **UI code layout:** `app.py` holds page config, startup catalog refresh, and **`main_ui()`** orchestration. Supporting modules: **`app_config.py`** (paths, `CLARIFY_SESSION_KEY`, optional `project_manager` / `org_inspector` / `smoke_templates` imports), **`app_csv.py`** (CSV parse, LLM block, scrollable preview, session cache), **`app_catalog.py`** (`rebuild_keyword_catalog`, capabilities cheat sheet), **`app_pipeline.py`** (`run_automation_pipeline`, `run_existing_test`, streaming logs, `build_augmented_prompt`, sidebar API-key sync, persisted results panel).
 

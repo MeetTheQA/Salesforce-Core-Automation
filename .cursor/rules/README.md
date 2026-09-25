@@ -24,7 +24,7 @@ Modes are composable: ask `@architect` to plan, then `@caveman` to implement, th
 | `@caveman` | Compressed implementation, repo-wide edits, batch fixes | **Agent** | **GPT 5.3 Codex** (fallback: Claude Opus 4.7) | Diffs |
 | `@architect` | System design, scaling, refactor strategy, deployment | **Ask** (or Agent if writing a doc) | **Claude Opus 4.7** | Written plan |
 | `@auditor` | Gap detection: dead buttons, orphan endpoints, contract drift | **Agent** | **GPT 5.3 Codex** (fallback: Claude Opus 4.7 for complex contract drift) | Audit report |
-| `@ux` | Navigation, hierarchy, flow simplification, dashboard coherence | **Ask** or **Agent** | **Claude Opus 4.7** | UX review / storyboard |
+| `@ux` | **Retired** (portal removed) — redirects to `@feature-memory` | — | — | — |
 | `@debug` | Root-cause debugging, async / MCP / browser / pipeline failures | **Agent** | **GPT 5.3 Codex** (fallback: Claude Opus 4.7) | Diagnosis + minimal fix |
 | `@feature-memory` | Grounded Feature Memory QA: no hallucinated SF facts; CLI over inventing APIs | **Agent** | Any capable coding model | CLI-driven workflow |
 
@@ -93,10 +93,10 @@ Modes are composable: ask `@architect` to plan, then `@caveman` to implement, th
 These apply regardless of which mode is active:
 
 - **Prefer `Glob` and `Grep` (ripgrep) over `find`/`grep` shell calls.** They respect `.gitignore` and are an order of magnitude faster on this tree.
-- **Never read `frontend/.next/`, `Results/`, `_local_data/`, `__pycache__/`, `venv/`, or `node_modules/`.** They are generated, large, and waste context.
-- **Pin the agent's attention with file paths, not file names.** `ai_qa_portal/backend/routers/generate.py` is unambiguous; `generate.py` is not.
-- **For repo-wide renames, list all hits first, then apply.** This repo has parallel paths under `ai_qa_portal/backend/` and a stale duplicate tree at the root — easy to miss half.
-- **Keep API-contract changes atomic.** A FastAPI route, its Pydantic model, the Alembic migration if any, and the typed client in `frontend/src/lib/api.ts` should change in the same turn.
+- **Never read `Results/`, `_local_data/`, `__pycache__/`, `venv/`, or `node_modules/`.** They are generated, large, and waste context.
+- **Pin the agent's attention with file paths, not file names.** `ai_qa_portal/backend/routers/features.py` is unambiguous; `features.py` is not.
+- **For repo-wide renames, list all hits first, then apply.** This repo has parallel paths under `ai_qa_portal/backend/` and helpers at the root — easy to miss half.
+- **Keep API-contract changes atomic.** A FastAPI route, its Pydantic model, the Alembic migration if any, and Feature Memory CLI / skill docs should change in the same turn.
 - **Background long-running shells** (dev servers, watchers) instead of blocking on them.
 - **One mode per turn.** Switching modes mid-turn fragments reasoning. Finish the turn, then switch.
 

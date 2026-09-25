@@ -1,5 +1,7 @@
 # Agent notes (Salesforce Core Automation)
 
+IDE-only. There is no Next.js / Streamlit portal in this repo.
+
 ## Feature Memory / grounded test cases / scripts / runs
 
 For Feature Memory, Jira→feature linking, analysis deltas, grounded test-case generation, approve/build Robot scripts, or running TC N / story tests in the IDE:
@@ -15,6 +17,6 @@ Human runbook: [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md).
 
 Cursor shorthand: `@feature-memory`.
 
-## Frontend (Next.js)
+## Backend surface (kept)
 
-Portal UI agents should also respect [`frontend/AGENTS.md`](frontend/AGENTS.md) when editing the Next.js app. Feature Memory pilot does **not** require the frontend.
+FastAPI routers used by the IDE path: `projects`, `features`, `user_stories`, `test_cases`, `orgs`, `personas`, `runs` (`/run`), `integrations` (Jira). Start with `scripts/feature_memory/start-backend.ps1` (`AUTH_DISABLED=true`).

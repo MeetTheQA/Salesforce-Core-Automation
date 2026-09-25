@@ -19,7 +19,9 @@ Use the **QA** branch for shared test automation work aligned with your team’s
 
 ## What this project is
 
-**Test Intelligence Platform** — a **Next.js** web app (`frontend/`) backed by a **FastAPI** service (`ai_qa_portal/backend/`) plus **Robot Framework** test assets for **Salesforce** (UI via Selenium and Playwright, optional API libraries). A legacy **Streamlit** UI (`app.py`) also still works as a CLI / dev entry point. Users describe tests in plain English; an LLM generates **`.robot`** suites using a live **keyword catalog** tied to Page Objects and shared keywords. The default primary LLM is the **Cursor SDK** (when `CURSOR_API_KEY` is set), with Gemini / OpenAI / Anthropic / Groq / Ollama as fallback providers. Runs target a Salesforce **sandbox** (URL, user, password supplied at run time — not committed to git).
+**Salesforce Core Automation (IDE)** — a **FastAPI** backend (`ai_qa_portal/backend/`) plus **Robot Framework** assets for **Salesforce**, driven from the IDE via the Feature Memory CLI (`scripts/feature_memory/cli.py`). There is no browser portal. QAs describe work in Cursor; agents call the CLI for Feature Memory, grounded test cases, script build, and runs. LLM providers: Gemini / OpenAI / Anthropic / Groq / Cursor SDK / Ollama (failover). Runs need a Salesforce **sandbox** org + persona (credentials stored by the backend — not committed to git).
+
+See [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md) and [`AGENTS.md`](AGENTS.md).
 
 ---
 
@@ -33,8 +35,8 @@ Use the **QA** branch for shared test automation work aligned with your team’s
 | **Data-driven CSV** | CSV upload; when tests use **`@{LEADS_FROM_CSV}`**, **`CsvDataLibrary`** loads **`uploaded_test_data.csv`** and drives **FOR** loops over rows. |
 | **Project workspace** | **`Saved_Projects/<name>/`** can hold tests, data, local config, and per-project **`Results/`** (not required for ad-hoc runs). |
 | **Parallel runs (Pabot)** | Optional **Pabot** for running multiple test cases in parallel (project suite flows). |
-| **In-app results** | Streamlit summarizes pass/fail from **`output.xml`** and shows failure screenshots without opening HTML reports first. |
-| **Human-in-the-loop** | Generated code is shown for review before save/run; avoids silent overwrites. |
+| **In-app results** | Robot HTML/XML under `Results/`; also served at `GET /results` from the API. |
+| **Human-in-the-loop** | Feature Memory deltas and test cases require explicit user accept/approve via CLI — no auto-accept. |
 | **Modular Salesforce tests** | Repo layout supports apps/areas such as **LucyChatBot**, **OmsChatBot**, **Platform**, and **B2B** under **`Tests/`** and **`Resources/`** (Page Objects, env-specific data). |
 
 ---
@@ -43,17 +45,17 @@ Use the **QA** branch for shared test automation work aligned with your team’s
 
 Use this as a smoke / regression outline when validating a new **QA** build or release.
 
-1. **Environment & app launch**
-   - Python **3.10+**, **`pip install -r requirements.txt`**, app starts via **`start_app.bat`** (Windows) or **`streamlit run app.py`**.
-   - Salesforce sandbox login works when credentials are provided through the documented flow (see **`README.md`** — **`EnvData.robot`** is generated at run time and is **gitignored**).
+1. **Environment & API launch**
+   - Python **3.10+**, **`pip install -r requirements.txt`**, start API via **`scripts/feature_memory/start-backend.ps1`** (or uvicorn). Confirm `cli.py status` → `ok`.
+   - Salesforce sandbox login works when org/persona credentials are set (see **`docs/IDE_FEATURE_MEMORY.md`** — **`EnvData.robot`** is generated at run time and is **gitignored**).
 
-2. **AI generation**
-   - Plain-English prompt produces a **`.robot`** draft that references real keywords from the catalog where possible.
-   - **Review / Save & Execute / Discard** behave as expected (no run without confirmation where applicable).
+2. **Feature Memory generation**
+   - Grounded generate produces draft test cases; **you** accept deltas and approve cases (no auto-accept).
+   - `scripts build` / `scripts show` produce real `.robot` under `Saved_Projects/`.
 
 3. **Execution**
-   - A simple generated or bundled test **opens the browser**, reaches Salesforce, and completes a minimal flow (navigation, form, save) against your sandbox.
-   - **Results** appear in-app (pass/fail, screenshots on failure). **`Results/`** (ad-hoc) or project **`Results/`** folders receive **`log.html`**, **`output.xml`**, **`report.html`** as configured.
+   - `runs case --index N` (or story run) opens the browser, reaches Salesforce, and completes a minimal flow against your sandbox.
+   - **Results** land under **`Results/`** (or project Results) with **`log.html`**, **`output.xml`**, **`report.html`**.
 
 4. **Self-healing / resilience**
    - If Salesforce shows validation errors after Save, healing keywords attempt to fix missing required fields without manual script edits (within supported cases).

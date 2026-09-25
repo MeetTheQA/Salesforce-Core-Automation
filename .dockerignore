@@ -6,9 +6,6 @@ Dockerfile
 docker-compose.yml
 fly.toml
 
-# Frontend is built and served by Vercel, not by this image.
-frontend/
-
 # Local virtualenvs and caches
 venv/
 .venv/
@@ -51,7 +48,6 @@ report.html
 ai_qa_portal/.env
 ai_qa_portal/.env.*
 !ai_qa_portal/.env.example
-frontend/.env*
 
 # Local plan / agent artefacts
 .cursor/

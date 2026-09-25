@@ -16,12 +16,8 @@ ENVDATA_PATH = REPO_ROOT / "Resources" / "TestData" / "EnvData.robot"
 class Settings(BaseSettings):
     fernet_key: str = ""
     api_base_url: str = "http://localhost:8000"
-    cors_origins: str = (
-        "http://localhost:3000,http://127.0.0.1:3000,"
-        "http://localhost:8501,http://127.0.0.1:8501"
-    )
-    # Extra CORS origins to allow on top of the built-in regex (comma separated).
-    # Useful when you attach a custom domain on top of *.vercel.app.
+    # IDE clients only (CLI / local tools). Comma-separated extras via env.
+    cors_origins: str = "http://localhost:8000,http://127.0.0.1:8000"
     extra_cors_origins: str = ""
     # Writable directories. Defaults keep dev unchanged; Docker / Fly point them
     # at the mounted volume via env vars.
@@ -32,9 +28,7 @@ class Settings(BaseSettings):
 
     # --- Auth (Phase 1) ---
     # OAuth 2.0 Client ID from Google Cloud Console. Required when AUTH_DISABLED is false.
-    # The backend uses this as the expected `aud` claim when verifying Google ID tokens
-    # via Google's JWKS endpoint. MUST match the GOOGLE_CLIENT_ID configured on the
-    # frontend's NextAuth Google provider, otherwise verification fails.
+    # Used as the expected `aud` claim when verifying Google ID tokens.
     google_client_id: str = ""
     # Only Google accounts in this Workspace domain may log in. Empty string disables the check
     # (open to any Google account) -- not recommended for production.

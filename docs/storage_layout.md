@@ -565,7 +565,7 @@ regardless of caller. That file is overwritten on every Quick generation.
 > **Warning:** Two concurrent Quick Generate sessions will corrupt each
 > other's output. The first to finish gets clobbered by the second.
 >
-> Mitigations available today: none in code. The frontend should
+> Mitigations available today: none in code. Callers should
 > serialise Quick generations per user (one in-flight at a time). The
 > long-term fix is to make the Quick path write to a per-request unique
 > path; not built yet.
@@ -642,21 +642,18 @@ That's all the user-generated state. `Resources/`, `Tests/`,
 | Secret | Why |
 |---|---|
 | `FERNET_KEY` env var | Without the same value, encrypted `password` and `security_token` fields in `config.json` and `personas.json` won't decrypt. The data is irrecoverably lost. |
-| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | NextAuth on the frontend won't authenticate against a different OAuth client. |
-| `AUTH_SECRET` (frontend `.env.local`) | If you generate a new one on the new machine, every existing session token becomes invalid -- users have to sign in again, which is acceptable. |
-| `CURSOR_API_KEY` (and any other LLM provider keys you rely on) | Without these the backend has no usable primary provider; generation falls all the way through to the last configured fallback (or fails outright if no key is set). Migrating them is mandatory if you want generation to keep working out of the box. |
+| `CURSOR_API_KEY` (and any other LLM provider keys you rely on) | Without these the backend has no usable primary provider; generation falls through the failover chain (or fails if no key is set). |
+| `AUTH_DISABLED` / Google auth vars | IDE pilot uses `AUTH_DISABLED=true`. If you enable real Google auth, keep `GOOGLE_CLIENT_ID` consistent. |
 
 ### Cold migration order of operations
 
-1. Stop both backend and frontend on the source machine.
+1. Stop the backend on the source machine.
 2. `tar`/copy `Saved_Projects/` and `ai_qa_portal/data/` to the destination.
-3. Copy `.env` (or at least `FERNET_KEY` + `GOOGLE_CLIENT_ID` +
-   `GOOGLE_CLIENT_SECRET` + `CURSOR_API_KEY` + any other LLM provider
-   keys you rely on) to the destination.
+3. Copy `.env` (or at least `FERNET_KEY` + LLM keys) to the destination.
 4. Bring up the backend on the destination and verify `/health` returns
    `200 {"status":"ok"}`.
-5. Sign in to verify auth works against the migrated `users.db`.
-6. Run a generate-scripts on a known story to verify `script_path`
+5. `py -3 scripts/feature_memory/cli.py status` to verify the IDE CLI path.
+6. Run a generate/build on a known story to verify `script_path`
    resolution works.
 
 ### Container rebuild
@@ -812,16 +809,16 @@ orgs are a **cached projection**.
 - Sync runs lazily so a hand-edit of `config.json` shows up the next
   time the bulk panel is opened, with no explicit migration step.
 
-### What breaks if you rotate a password through the portal UI only
+### What breaks if you rotate a password via personas API only
 
-Suppose you rotate a persona's password via the portal UI:
+Suppose you rotate a persona's password via `PATCH`/`PUT` on personas:
 
-- The portal write goes ONLY to `personas.json`. `config.json` is
+- The write goes ONLY to `personas.json`. `config.json` is
   unchanged.
-- The next `GET /personas` call will NOT clobber your portal change --
+- The next `GET /personas` call will NOT clobber your change --
   the sync skips any persona row that already exists in the portal
   store.
-- BUT `run_test.py` and the legacy Streamlit flow still read
+- BUT `run_test.py` and other legacy readers still read
   `config.json`, so they'll keep using the OLD password.
 
 ### The right way to rotate a password today

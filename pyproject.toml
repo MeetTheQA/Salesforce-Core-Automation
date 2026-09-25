@@ -1,4 +1,4 @@
-# Python tooling config for the Salesforce Automation portal.
+# Python tooling config for the Salesforce Automation IDE backend.
 #
 # This file is the single source of truth for ruff (primary linter) and
 # pylint (legacy, kept so the IDE doesn't fight existing integrations).
@@ -13,7 +13,6 @@ target-version = "py313"
 line-length = 100
 extend-exclude = [
   ".cursor",
-  ".next",
   ".pytest_cache",
   "_local_data",
   "Results",
@@ -21,7 +20,6 @@ extend-exclude = [
   "Tests/Generated",
   "ai_qa_portal/data",
   "ai_qa_portal/outputs",
-  "frontend",
   "venv",
 ]
 
@@ -69,10 +67,7 @@ ignore = [
 "**/tests/**" = ["ARG", "B", "F841"]
 # Generated Robot test files / generated code aren't ours to lint.
 "Tests/Generated/**" = ["ALL"]
-# The Streamlit-era top-level scripts are scheduled for retirement;
-# applying ruff's full kit would generate noise on code we're already
-# planning to delete (see docs/cursor-sdk-integration.md for the
-# Streamlit retirement plan).
+# Legacy root helpers (app_schema, app_catalog, …) — keep lint noise low.
 "app*.py" = ["F", "E"]
 
 [tool.ruff.lint.isort]

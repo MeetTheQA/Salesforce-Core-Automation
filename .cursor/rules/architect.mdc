@@ -6,7 +6,7 @@ alwaysApply: false
 
 # @architect — System Architecture Mode
 
-Operating profile for design work on this Salesforce QA Automation platform. Treats the repo as a multi-surface SaaS: FastAPI backend (`ai_qa_portal/backend/`), Next.js App Router frontend (`frontend/`), MCP bridges (`mcp_bridge.py`, `pw_mcp_bridge.py`, `cursor_sdk_bridge.py`), Robot Framework execution engine (`Tests/`, `Resources/`, `Libraries/`), and a legacy Streamlit surface (`app*.py`) being phased out.
+Operating profile for design work on this Salesforce QA Automation platform. Treats the repo as an IDE-first stack: FastAPI backend (`ai_qa_portal/backend/`), Feature Memory CLI (`scripts/feature_memory/`), MCP bridges (`mcp_bridge.py`, `pw_mcp_bridge.py`, `cursor_sdk_bridge.py`), and Robot Framework execution (`Tests/`, `Resources/`, `Libraries/`). Browser UIs (Next.js, Streamlit) have been removed.
 
 This mode is read-only first. Do not edit code in the planning phase.
 
@@ -36,12 +36,12 @@ Skip sections that are genuinely empty. Do not pad.
 
 ## Repo-aware design lenses
 
-- **Backend boundaries**: routers in `ai_qa_portal/backend/routers/` are thin; services in `services/` own business logic; persistence is via `services/db_models/` + Alembic migrations in `alembic/versions/`. Plans must respect this layering.
-- **API contract**: any new route needs a Pydantic model, a service function, an Alembic migration if state changes, and a typed client in `frontend/src/lib/api.ts`.
-- **Frontend boundaries**: pages live under `frontend/src/app/` (App Router); shared UI in `frontend/src/components/`; project-scoped routes use `p/[project]/...` and global routes are being deprecated. Plans should prefer the project-scoped tree.
+- **Backend boundaries**: routers in `ai_qa_portal/backend/routers/` are thin; services in `services/` own business logic; persistence is via `services/db_models/` + Alembic migrations in `alembic/versions/`. Plans must respect this layering. Kept routers: projects, features, user_stories, test_cases, orgs, personas, runs, integrations.
+- **API contract**: any new IDE-facing route needs a Pydantic model, a service function, an Alembic migration if state changes, and a Feature Memory CLI subcommand (or documented curl) plus skill update.
+- **IDE surface**: agents call `scripts/feature_memory/cli.py` only; do not invent HTTP clients in chat.
 - **AI / MCP layer**: `ai_bridge.py`, `mcp_bridge.py`, `pw_mcp_bridge.py`, and `ai_qa_portal/backend/services/planner_*.py` are the AI surfaces. Treat them as a vertical: prompt assembly → tool dispatch → result validation. Do not collapse layers.
-- **Execution engine**: Robot Framework runs are produced by the generation pipeline. Results land in `Results/`. Plans involving test execution must address artifact lifecycle.
-- **Legacy Streamlit**: `app*.py` at root is in sunset. New features should not extend it; plans should propose how parity moves to Next.js + FastAPI.
+- **Execution engine**: Robot Framework runs are produced by the generation/build pipeline. Results land in `Results/`. Plans involving test execution must address artifact lifecycle.
+- **No browser portal**: do not propose restoring Next.js/Streamlit unless the user explicitly asks.
 
 ## Deployment lens
 
@@ -53,9 +53,8 @@ Skip sections that are genuinely empty. Do not pad.
 
 - New abstraction with one caller.
 - New service module that duplicates an existing one in `services/`.
-- Frontend page that calls FastAPI directly without going through `frontend/src/lib/api.ts`.
+- Inventing HTTP calls in chat instead of extending `scripts/feature_memory/cli.py`.
 - Adding a third storage path when SQLAlchemy + Alembic already fits.
-- Mixing project-scoped (`/p/[project]/...`) and global routes for the same concept.
 - Synchronous AI calls inside HTTP request handlers.
 
 ## When to hand off

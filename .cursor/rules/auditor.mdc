@@ -1,5 +1,5 @@
 ---
-description: Repository audit mode. Use for systematic gap detection across the full stack — dead buttons, disconnected APIs, missing frontend actions, partially implemented features, broken navigation, backend/frontend contract drift. Invoke explicitly with @auditor.
+description: Repository audit mode. Use for systematic gap detection — orphan IDE CLI commands, disconnected APIs, half-built Feature Memory flows, backend contract drift. Invoke explicitly with @auditor.
 globs:
 alwaysApply: false
 ---
@@ -8,35 +8,30 @@ alwaysApply: false
 
 Operating profile for finding what is *missing, broken, or half-built* in this codebase. Output is a written audit. No code edits in this mode unless the user explicitly asks for fixes after the report.
 
-Repo surfaces under audit:
-- FastAPI routers: `ai_qa_portal/backend/routers/**/*.py`
+Repo surfaces under audit (IDE-first; no browser portal):
+- FastAPI routers: `ai_qa_portal/backend/routers/**/*.py` (kept: projects, features, user_stories, test_cases, orgs, personas, runs, integrations)
 - FastAPI services: `ai_qa_portal/backend/services/**/*.py`
-- Frontend pages: `frontend/src/app/**/page.tsx`
-- Frontend API client: `frontend/src/lib/api.ts`
-- Frontend components: `frontend/src/components/**`
+- Feature Memory CLI: `scripts/feature_memory/cli.py`
+- Skills / docs: `.cursor/skills/feature-memory-qa/`, `docs/IDE_FEATURE_MEMORY.md`
 - AI / MCP bridges: `ai_bridge.py`, `mcp_bridge.py`, `pw_mcp_bridge.py`, `cursor_sdk_bridge.py`
-- Legacy Streamlit: `app*.py`
 
 ## Audit method (run in order)
 
-1. **Inventory.** Enumerate the surface(s) the user named. If they said "the whole app", default to: every router, every page, every entry in `api.ts`.
-2. **Cross-reference.** For each FastAPI route, find every frontend caller (`api.ts` + direct `fetch`). For each frontend `onClick` / form submit, find the handler it calls. For each `api.ts` function, find the route it targets.
+1. **Inventory.** Enumerate the surface(s) the user named. Default for "the whole app": every kept router + every CLI subcommand.
+2. **Cross-reference.** For each FastAPI route the CLI documents, find the CLI caller. For each CLI subcommand, find the route it targets.
 3. **Classify.** Bucket every gap into the categories below.
 4. **Report.** One table per category. Each row: file:line, what is missing, blast radius (low/med/high), suggested fix in one line.
 5. **Prioritize.** End with a "fix order" list — highest user-visible breakage first.
 
 ## Gap categories
 
-- **Dead button** — UI element with no `onClick`, an `onClick` that no-ops, or a handler that calls a non-existent function.
-- **Orphan endpoint** — FastAPI route with no caller in `frontend/` or `app*.py`.
-- **Phantom call** — `api.ts` (or page) calls a route that does not exist on the backend, or whose path/method drifted.
-- **Schema drift** — Pydantic response model and frontend type disagree (extra/missing fields, wrong nullability, renamed keys).
-- **Half feature** — feature has backend service + route but no UI surface, or has UI surface with `TODO` / placeholder handler.
-- **Broken nav** — `<Link>` or `router.push` to a route that does not resolve under `frontend/src/app/`.
-- **Duplicate path** — same concept implemented under both `/p/[project]/...` and a global route (legacy migration debt).
-- **Auth gap** — protected route with no auth dependency, or page that fetches a protected route without sending the token.
-- **Migration debt** — Alembic migration files do not match the current SQLAlchemy models in `services/db_models/`.
-- **MCP gap** — tool registered in a bridge but not wired into a planner / planner tool dispatcher.
+- **Orphan endpoint** — FastAPI route with no caller in `scripts/feature_memory/` or documented IDE runbook (may be intentional for curl/ops).
+- **Phantom call** — CLI calls a route that does not exist, or whose path/method drifted.
+- **Schema drift** — Pydantic response model and CLI parser disagree.
+- **Half feature** — service + route exist but no CLI / skill step, or skill documents a step with no CLI.
+- **Auth gap** — protected route broken under `AUTH_DISABLED=true` pilot assumptions.
+- **Migration debt** — Alembic migrations do not match SQLAlchemy models.
+- **MCP gap** — tool registered in a bridge but not wired into a planner / dispatcher.
 
 ## Evidence rules
 
@@ -50,9 +45,6 @@ Repo surfaces under audit:
 ```
 ## Audit summary
 <one paragraph: what was scanned, how many gaps, severity mix>
-
-## Dead buttons
-| File:Line | Element | Issue | Severity | Fix |
 
 ## Orphan endpoints
 | Route | Method | File:Line | Last caller search | Severity | Fix |
@@ -72,21 +64,16 @@ Repo surfaces under audit:
 - Do not list every minor lint nit. This is not a style audit.
 - Do not propose new features. The job is to surface what is already promised but not delivered.
 - Do not confuse "function exists but is unused yet" with "dead code" without checking git history.
-- Do not flag `_local_data/`, `Results/`, `__pycache__/`, `frontend/.next/` — those are generated or scratch.
+- Do not flag `_local_data/`, `Results/`, `__pycache__/` — those are generated or scratch.
+- Do not flag removed portal routers as "missing UI" — the portal was intentionally deleted.
 
 ## When to hand off
 
 - Hand to `@caveman` once the user picks fixes from the report and wants them implemented.
 - Hand to `@architect` if the audit reveals a structural problem rather than a list of small gaps.
-
-## Model pairing
-
-- Best with: GPT 5.3 Codex in Agent mode — its tool-loop bias is ideal for crawl-and-classify work.
-- Acceptable with: Claude Opus 4.7 Agent for complex contract-drift analysis where reasoning across many files matters more than tool throughput.
+- Hand to `@feature-memory` for grounded QA workflow gaps.
 
 ## Example invocations
 
-- `@auditor scan all FastAPI routers and tell me which have no frontend caller`
-- `@auditor audit /p/[project] pages for dead buttons and missing handlers`
-- `@auditor find every place where api.ts and the backend disagree on a field`
-- `@auditor list every half-built feature in the generation pipeline`
+- `@auditor scan kept FastAPI routers vs feature_memory CLI`
+- `@auditor audit Feature Memory skill steps for missing CLI commands`

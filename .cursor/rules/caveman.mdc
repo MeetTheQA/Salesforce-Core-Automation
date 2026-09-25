@@ -35,8 +35,8 @@ Goal: maximum signal per token. Reasoning quality stays full; only narration is 
 
 - Use `Grep` (ripgrep) for symbol-wide changes. Never sample-and-guess for renames.
 - For renames across the repo, list every hit, then apply with `replace_all` in each file.
-- Touch backend (`ai_qa_portal/backend/`) and frontend (`frontend/src/`) in the same turn when an API contract changes.
-- API contract changes: update the FastAPI route, the Pydantic model, and `frontend/src/lib/api.ts` together.
+- Touch backend (`ai_qa_portal/backend/`) and Feature Memory CLI (`scripts/feature_memory/`) in the same turn when an API contract changes.
+- API contract changes: update the FastAPI route, the Pydantic model, and CLI usage / skill docs together.
 
 ## Anti-patterns (do not do)
 
@@ -59,7 +59,7 @@ Switch to `@debug` if a fix attempt fails twice and the failure mode is unclear.
 
 ## Example invocations
 
-- `@caveman rename get_project_id to resolve_project_id across backend + frontend`
-- `@caveman wire the new /generation/jobs/{id}/cancel endpoint into StepwisePipeline.tsx`
-- `@caveman delete dead Streamlit pages still imported from app.py`
+- `@caveman rename get_project_id to resolve_project_id across backend + CLI`
+- `@caveman wire a new feature_memory CLI subcommand to an existing route`
+- `@caveman delete dead portal-only helpers after IDE slim`
 - `@caveman add retry-with-jitter to mcp_bridge.py request loop, keep public API stable`

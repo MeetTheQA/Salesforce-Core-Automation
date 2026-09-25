@@ -1,14 +1,15 @@
-# IDE Feature Memory (backend-only pilot)
+# IDE Feature Memory (backend-only)
 
-Run the Feature Knowledge Brain from Cursor / VS Code / Antigravity **without** the Next.js UI. Each QA uses a local FastAPI + their own `data/` fork.
+Run the Feature Knowledge Brain from Cursor / VS Code / Antigravity. Each QA uses a local FastAPI + their own `data/` fork. No browser UI.
+
 
 ## One-time setup
 
-1. Clone the repo and install Python deps the way you normally run the portal backend.
+1. Clone the repo and install Python deps (`pip install -r requirements.txt`).
 2. Ensure local auth bypass for the pilot:
-   - In backend `.env`: `AUTH_DISABLED=true`
+   - In `.env`: `AUTH_DISABLED=true`
    - Or rely on `scripts/feature_memory/start-backend.ps1` which sets `AUTH_DISABLED=true` for that process.
-3. Start **backend only** (no frontend required):
+3. Start the API:
 
 ```powershell
 .\scripts\feature_memory\start-backend.ps1
