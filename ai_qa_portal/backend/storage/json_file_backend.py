@@ -47,6 +47,8 @@ class JsonFileBackend(StorageBackend):
         old_row = self.read(f"user_story:{sid}")
         old_sprint = old_row.get("sprint_id") if old_row else None
         new_sprint = story.get("sprint_id")
+        old_feature = old_row.get("feature_id") if old_row else None
+        new_feature = story.get("feature_id")
 
         self.write(f"user_story:{sid}", story)
 
@@ -72,6 +74,18 @@ class JsonFileBackend(StorageBackend):
             if sid not in sp_ids:
                 sp_ids.insert(0, sid)
             self.write(sp_key, {"ids": sp_ids})
+        if old_feature and old_feature != new_feature:
+            old_key = f"user_stories_by_feature:{old_feature}"
+            old_idx = self.read(old_key)
+            old_ids = [x for x in old_idx.get("ids", []) if x != sid]
+            self.write(old_key, {"ids": old_ids})
+        if new_feature:
+            feat_key = f"user_stories_by_feature:{new_feature}"
+            feat_idx = self.read(feat_key)
+            feat_ids: list[str] = list(feat_idx.get("ids", []))
+            if sid not in feat_ids:
+                feat_ids.insert(0, sid)
+            self.write(feat_key, {"ids": feat_ids})
 
     def get_user_story(self, story_id: UUID) -> dict[str, Any]:
         data = self.read(f"user_story:{story_id}")
@@ -129,6 +143,125 @@ class JsonFileBackend(StorageBackend):
             if row:
                 out.append(row)
         return out
+
+    def get_user_stories_by_feature(self, feature_id: UUID) -> list[dict[str, Any]]:
+        idx = self.read(f"user_stories_by_feature:{feature_id}")
+        out: list[dict[str, Any]] = []
+        for sid in idx.get("ids", []):
+            row = self.read(f"user_story:{sid}")
+            if row:
+                out.append(row)
+        return out
+
+    # --- Features / feature memory -----------------------------------
+
+    def save_feature(self, feature: dict[str, Any]) -> None:
+        fid = str(feature["id"])
+        self.write(f"feature:{fid}", feature)
+        pid = str(feature["project_id"])
+        idx_key = f"features_by_project:{pid}"
+        idx = self.read(idx_key)
+        ids: list[str] = list(idx.get("ids", []))
+        if fid not in ids:
+            ids.insert(0, fid)
+        self.write(idx_key, {"ids": ids})
+
+    def get_feature(self, feature_id: UUID) -> dict[str, Any]:
+        data = self.read(f"feature:{feature_id}")
+        if not data:
+            raise KeyError(str(feature_id))
+        return data
+
+    def list_features(self, project_id: UUID) -> list[dict[str, Any]]:
+        idx = self.read(f"features_by_project:{project_id}")
+        out: list[dict[str, Any]] = []
+        for fid in idx.get("ids", []):
+            row = self.read(f"feature:{fid}")
+            if row:
+                out.append(row)
+        return out
+
+    def save_feature_memory(self, feature_id: UUID, memory: dict[str, Any]) -> None:
+        self.write(f"feature_memory:{feature_id}", memory)
+
+    def get_feature_memory(self, feature_id: UUID) -> dict[str, Any]:
+        return self.read(f"feature_memory:{feature_id}")
+
+    def append_feature_memory_revision(self, feature_id: UUID, revision: dict[str, Any]) -> None:
+        rid = str(revision.get("id") or "")
+        if not rid:
+            raise ValueError("feature memory revision id is required")
+        self.write(f"feature_memory_revision:{rid}", revision)
+        idx_key = f"feature_memory_revisions_by_feature:{feature_id}"
+        idx = self.read(idx_key)
+        ids: list[str] = list(idx.get("ids", []))
+        if rid not in ids:
+            ids.insert(0, rid)
+        self.write(idx_key, {"ids": ids})
+
+    def list_feature_memory_revisions(self, feature_id: UUID) -> list[dict[str, Any]]:
+        idx = self.read(f"feature_memory_revisions_by_feature:{feature_id}")
+        out: list[dict[str, Any]] = []
+        for rid in idx.get("ids", []):
+            row = self.read(f"feature_memory_revision:{rid}")
+            if row:
+                out.append(row)
+        return out
+
+    def save_feature_memory_delta(self, delta: dict[str, Any]) -> None:
+        did = str(delta["id"])
+        self.write(f"feature_memory_delta:{did}", delta)
+        fid = str(delta["feature_id"])
+        idx_key = f"feature_memory_deltas_by_feature:{fid}"
+        idx = self.read(idx_key)
+        ids: list[str] = list(idx.get("ids", []))
+        if did not in ids:
+            ids.insert(0, did)
+        self.write(idx_key, {"ids": ids})
+
+    def get_feature_memory_delta(self, delta_id: str) -> dict[str, Any]:
+        data = self.read(f"feature_memory_delta:{delta_id}")
+        if not data:
+            raise KeyError(delta_id)
+        return data
+
+    def list_feature_memory_deltas(self, feature_id: UUID) -> list[dict[str, Any]]:
+        idx = self.read(f"feature_memory_deltas_by_feature:{feature_id}")
+        out: list[dict[str, Any]] = []
+        for did in idx.get("ids", []):
+            row = self.read(f"feature_memory_delta:{did}")
+            if row:
+                out.append(row)
+        return out
+
+    def get_feature_match_map(self, project_id: UUID, kind: str) -> dict[str, Any]:
+        row = self.read(f"feature_match_{kind}_map:{project_id}")
+        if not row:
+            return {"rules": {}, "display": {}}
+        row.setdefault("rules", {})
+        row.setdefault("display", {})
+        return row
+
+    def save_feature_match_map(self, project_id: UUID, kind: str, data: dict[str, Any]) -> None:
+        self.write(f"feature_match_{kind}_map:{project_id}", data)
+
+    def append_feature_match_conflict(self, project_id: UUID, item: dict[str, Any]) -> None:
+        key = f"feature_match_conflicts:{project_id}"
+        blob = self.read(key)
+        items = list(blob.get("items", []))
+        story_id = str(item.get("story_id") or "")
+        items = [x for x in items if str(x.get("story_id") or "") != story_id]
+        items.insert(0, item)
+        self.write(key, {"items": items[:200]})
+
+    def list_feature_match_conflicts(self, project_id: UUID) -> list[dict[str, Any]]:
+        return list(self.read(f"feature_match_conflicts:{project_id}").get("items", []))
+
+    def clear_feature_match_conflict(self, project_id: UUID, story_id: str) -> None:
+        key = f"feature_match_conflicts:{project_id}"
+        blob = self.read(key)
+        items = [x for x in blob.get("items", []) if str(x.get("story_id") or "") != story_id]
+        self.write(key, {"items": items})
 
     def save_test_case(self, tc: dict[str, Any]) -> None:
         tid = str(tc["id"])
@@ -265,10 +398,13 @@ class JsonFileBackend(StorageBackend):
             return False
         pid = str(existing.get("project_id") or "")
         sprint_id = existing.get("sprint_id")
+        feature_id = existing.get("feature_id")
         if pid:
             self._drop_from_index(f"user_stories_by_project:{pid}", sid)
         if sprint_id:
             self._drop_from_index(f"user_stories_by_sprint:{sprint_id}", sid)
+        if feature_id:
+            self._drop_from_index(f"user_stories_by_feature:{feature_id}", sid)
         return self._delete_file(f"user_story:{sid}")
 
     def hard_delete_test_case(self, test_case_id: UUID) -> bool:

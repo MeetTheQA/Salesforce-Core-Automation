@@ -1,0 +1,21 @@
+---
+description: Feature Memory anti-hallucination guardrails for grounded Salesforce QA. Invoke explicitly with @feature-memory.
+globs:
+alwaysApply: false
+---
+
+# @feature-memory — Feature Knowledge Brain
+
+Short guardrail for IDE agents. Full playbook: `.cursor/skills/feature-memory-qa/SKILL.md`.
+CLI: `py -3 scripts/feature_memory/cli.py`.
+
+## Rules
+
+- Feature Memory is the source of truth. User edits beat model guesses.
+- Propose-then-accept for memory deltas. Never silent merge. Never auto-accept.
+- Grounded generate only when the story has `feature_id`. Mandatory flags: `context_mode=feature_memory_only`, `use_rag=false`, `use_catalog=false`. Enabling RAG/catalog on this path is a defect.
+- Inventing Salesforce objects, fields, or flows absent from memory + story text is a defect.
+- Prefer `scripts/feature_memory/cli.py` over freeform HTTP. Do not invent API paths.
+- Map “TC N” via `cases list` then `--index N`. Never invent case UUIDs.
+- Never fabricate `.robot` content — use `scripts build` / `scripts show`.
+- Approve only after user confirmation. Runs need real `--org` / `--persona` (or env); do not invent them.

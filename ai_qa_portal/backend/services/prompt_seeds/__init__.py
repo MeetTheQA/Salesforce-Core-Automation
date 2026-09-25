@@ -157,6 +157,31 @@ SEED_MANIFEST: tuple[SeedSpec, ...] = (
         output_format="robot_script",
         placeholders_declared=("action_log", "project", "persona"),
     ),
+    SeedSpec(
+        filename="grounded_requirement_analyzer.md",
+        category="requirement_analyzer",
+        name="Grounded requirement analyzer",
+        description=(
+            "Feature-memory grounded Salesforce requirement analysis. "
+            "JSON object with analysis_markdown and proposed_facts. "
+            "Does not invent objects, roles, or fields."
+        ),
+        output_format="freeform",
+        placeholders_declared=("story", "feature_memory", "related_stories"),
+        compose_with_playbook=False,
+    ),
+    SeedSpec(
+        filename="grounded_test_case_drafter.md",
+        category="test_case_drafter",
+        name="Grounded Salesforce drafter",
+        description=(
+            "Feature-memory grounded test case drafter. JSON array only. "
+            "Uses story, memory, related stories, and analysis. No RAG."
+        ),
+        output_format="json_array",
+        placeholders_declared=("story", "feature_memory", "related_stories", "analysis"),
+        compose_with_playbook=False,
+    ),
 )
 
 

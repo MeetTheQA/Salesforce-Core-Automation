@@ -237,6 +237,36 @@ export interface PendingBaseline {
   is_new: boolean;
 }
 
+export interface FeatureMemoryFact {
+  id: string;
+  section: string;
+  text: string;
+  source_kind: "jira_story" | "analysis" | "user" | string;
+  source_story_keys: string[];
+  source_note?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface FeatureMemory {
+  feature_id: string;
+  version: number;
+  markdown: string;
+  facts: FeatureMemoryFact[];
+  updated_at: string;
+}
+
+export interface FeatureRow {
+  id: string;
+  project_id: string;
+  name: string;
+  summary: string;
+  status: "active" | "archived";
+  created_at: string;
+  updated_at: string;
+  owner_user_id: string;
+}
+
 export interface RunHistoryRow {
   run_name: string;
   timestamp: string;
@@ -775,6 +805,17 @@ export const api = {
     /** AI-generates draft test cases AND persists them as status=draft.
      *  Frontend should refetch testCases.list(id) afterwards to get the
      *  canonical rows with their server-assigned ids. */
+    analyze: (id: string) =>
+      apiFetch<{
+        story_id: string;
+        feature_id: string;
+        analysis_markdown: string;
+        delta_id: string;
+        facts_proposed: number;
+      }>(`/user-stories/${encodeURIComponent(id)}/analyze`, {
+        method: "POST",
+        body: "{}",
+      }),
     generate: (id: string) =>
       apiFetch<any>(`/user-stories/${encodeURIComponent(id)}/generate`, {
         method: "POST",
@@ -806,6 +847,102 @@ export const api = {
         method: "POST",
         body: JSON.stringify({ ids, permanent }),
       }),
+  },
+  features: {
+    list: (projectId: string, includeArchived = false) =>
+      apiFetch<FeatureRow[]>(
+        `/api/features?project_id=${encodeURIComponent(projectId)}${
+          includeArchived ? "&include_archived=true" : ""
+        }`,
+      ),
+    create: (body: { project_id: string; name: string; summary?: string }) =>
+      apiFetch<FeatureRow>("/api/features", { method: "POST", body: JSON.stringify(body) }),
+    get: (featureId: string) =>
+      apiFetch<FeatureRow>(`/api/features/${encodeURIComponent(featureId)}`),
+    update: (featureId: string, body: { name?: string; summary?: string; status?: "active" | "archived" }) =>
+      apiFetch<FeatureRow>(`/api/features/${encodeURIComponent(featureId)}`, {
+        method: "PATCH",
+        body: JSON.stringify(body),
+      }),
+    stories: (featureId: string) =>
+      apiFetch<any[]>(`/api/features/${encodeURIComponent(featureId)}/stories`),
+    linkStory: (featureId: string, storyId: string) =>
+      apiFetch<any>(`/api/features/${encodeURIComponent(featureId)}/stories/${encodeURIComponent(storyId)}`, {
+        method: "POST",
+        body: "{}",
+      }),
+    unlinkStory: (featureId: string, storyId: string) =>
+      apiFetch<any>(`/api/features/${encodeURIComponent(featureId)}/stories/${encodeURIComponent(storyId)}`, {
+        method: "DELETE",
+      }),
+    memory: (featureId: string) =>
+      apiFetch<FeatureMemory>(`/api/features/${encodeURIComponent(featureId)}/memory`),
+    editMemory: (
+      featureId: string,
+      body: {
+        reason?: string;
+        facts: Array<{
+          section: string;
+          text: string;
+          source_kind: "jira_story" | "analysis" | "user" | string;
+          source_story_keys?: string[];
+          source_note?: string | null;
+        }>;
+      },
+    ) =>
+      apiFetch<FeatureMemory>(`/api/features/${encodeURIComponent(featureId)}/memory`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      }),
+    revisions: (featureId: string) =>
+      apiFetch<any[]>(`/api/features/${encodeURIComponent(featureId)}/memory/revisions`),
+    deltas: (featureId: string, status: "pending" | "accepted" | "rejected" | "all" = "pending") =>
+      apiFetch<any[]>(`/api/features/${encodeURIComponent(featureId)}/memory/deltas?status=${status}`),
+    acceptDelta: (featureId: string, deltaId: string, reason?: string) =>
+      apiFetch<FeatureMemory>(
+        `/api/features/${encodeURIComponent(featureId)}/memory/deltas/${encodeURIComponent(deltaId)}/accept`,
+        {
+          method: "POST",
+          body: JSON.stringify({ reason: reason || "manual_review" }),
+        },
+      ),
+    rejectDelta: (featureId: string, deltaId: string, reason?: string) =>
+      apiFetch<any>(
+        `/api/features/${encodeURIComponent(featureId)}/memory/deltas/${encodeURIComponent(deltaId)}/reject`,
+        {
+          method: "POST",
+          body: JSON.stringify({ reason: reason || "manual_review" }),
+        },
+      ),
+    analyzeStory: (featureId: string, storyId: string) =>
+      apiFetch<any>(`/api/features/${encodeURIComponent(featureId)}/stories/${encodeURIComponent(storyId)}/analyze`, {
+        method: "POST",
+        body: "{}",
+      }),
+    merge: (body: { project_id: string; target_feature_id: string; source_feature_id: string }) =>
+      apiFetch<any>("/api/features/merge", { method: "POST", body: JSON.stringify(body) }),
+    matchRules: (projectId: string) =>
+      apiFetch<{ rules: Array<{ kind: string; key: string; normalized: string; feature_id: string }> }>(
+        `/api/features/match-rules?project_id=${encodeURIComponent(projectId)}`,
+      ),
+    upsertMatchRule: (body: { project_id: string; kind: "epic" | "label" | "component"; key: string; feature_id: string }) =>
+      apiFetch<any>("/api/features/match-rules", { method: "POST", body: JSON.stringify(body) }),
+    deleteMatchRule: (body: { project_id: string; kind: string; key: string }) =>
+      apiFetch<any>("/api/features/match-rules", { method: "DELETE", body: JSON.stringify(body) }),
+    seedTemplates: (projectId: string) =>
+      apiFetch<{ templates: Array<{ id: string; name: string; summary: string }> }>(
+        `/api/features/seed-templates?project_id=${encodeURIComponent(projectId)}`,
+      ),
+    applySeed: (featureId: string, templateId: string) =>
+      apiFetch<FeatureMemory>(`/api/features/${encodeURIComponent(featureId)}/seed`, {
+        method: "POST",
+        body: JSON.stringify({ template_id: templateId }),
+      }),
+    reviewQueue: (projectId: string) =>
+      apiFetch<{
+        unmatched: Array<{ id: string; title: string; external_id?: string | null }>;
+        conflicts: Array<{ story_id: string; reason: string; hits: Array<{ kind: string; value: string; feature_id: string }> }>;
+      }>(`/api/features/review-queue?project_id=${encodeURIComponent(projectId)}`),
   },
   testCases: {
     get: (id: string) => apiFetch<any>(`/test-cases/${encodeURIComponent(id)}`),

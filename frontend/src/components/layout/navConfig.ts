@@ -32,6 +32,7 @@ export const CORE_NAV_GROUPS: NavGroup[] = [
       { href: "/p/:project", label: "Overview", icon: "🧭", match: "prefix", requiresProject: true, section: "plan" },
       { href: "/p/:project/sprints", label: "Sprints", icon: "🏃", match: "prefix", requiresProject: true, section: "plan" },
       { href: "/p/:project/stories", label: "Stories", icon: "📖", match: "prefix", requiresProject: true, section: "plan" },
+      { href: "/p/:project/features", label: "Features", icon: "🧠", match: "prefix", requiresProject: true, section: "plan" },
       { href: "/p/:project/generate", label: "Generate", icon: "🧪", match: "prefix", requiresProject: true, section: "build" },
       { href: "/p/:project/runs", label: "Runs", icon: "🏁", match: "prefix", requiresProject: true, section: "run" },
       { href: "/p/:project/analytics", label: "Analytics", icon: "📈", match: "prefix", requiresProject: true, section: "run" },

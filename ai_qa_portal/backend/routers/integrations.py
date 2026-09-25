@@ -19,6 +19,15 @@ from ai_qa_portal.backend.config import settings
 from ai_qa_portal.backend.models.sprint import Sprint, SprintState
 from ai_qa_portal.backend.models.user_story import UserStory, UserStoryStatus
 from ai_qa_portal.backend.project_registry import ensure_project_uuid
+from ai_qa_portal.backend.services.feature_matcher import (
+    extract_match_signals,
+    load_match_maps,
+    match_signals,
+    normalize_token,
+    record_conflict,
+)
+from ai_qa_portal.backend.services.feature_memory import load_feature_memory, upsert_memory_facts
+from ai_qa_portal.backend.services.salesforce_feature_seeds import SEED_TEMPLATES, facts_for_template
 from ai_qa_portal.backend.services.auth import (
     assert_project_role_at_least,
     get_current_user,
@@ -481,6 +490,35 @@ def jira_bulk_delete_synced_issues(
     return {"deleted": len(deleted_ids), "deleted_ids": deleted_ids, "skipped": skipped}
 
 
+def _bootstrap_seed_if_empty(store, feature_id: UUID | None, author_user_id: str) -> None:
+    """Apply a Salesforce Core seed only when the linked feature memory is empty
+    and the feature name matches a template name exactly (normalized)."""
+    if feature_id is None:
+        return
+    try:
+        feature = store.get_feature(feature_id)
+    except KeyError:
+        return
+    memory = load_feature_memory(store, feature_id)
+    if memory.facts:
+        return
+    wanted = normalize_token(str(feature.get("name") or ""))
+    template_id = None
+    for tid, spec in SEED_TEMPLATES.items():
+        if normalize_token(str(spec.get("name") or "")) == wanted:
+            template_id = tid
+            break
+    if not template_id:
+        return
+    upsert_memory_facts(
+        store,
+        feature_id,
+        incoming_facts=facts_for_template(template_id),
+        reason=f"seed_template:{template_id}",
+        author_user_id=author_user_id,
+    )
+
+
 @router.post("/projects/{slug}/integrations/jira/import")
 def jira_import_to_portal(
     slug: str,
@@ -495,6 +533,10 @@ def jira_import_to_portal(
 
     imported_sprints: list[str] = []
     imported_stories: list[str] = []
+    auto_linked_count = 0
+    unlinked_count = 0
+    conflict_count = 0
+    match_maps = load_match_maps(_store, project_id)
     jira_sprints = (
         db.query(JiraSprint).filter(JiraSprint.jira_id.in_(sprint_ids)).all() if sprint_ids else []
     )
@@ -538,11 +580,37 @@ def jira_import_to_portal(
             )
             if sprint_map and sprint_map.portal_sprint_id:
                 sprint_uuid = UUID(sprint_map.portal_sprint_id)
+        comment_rows = (
+            db.query(JiraComment)
+            .filter(JiraComment.issue_jira_id == ji.jira_id)
+            .order_by(JiraComment.created_at.asc())
+            .all()
+        )
+        comment_text = "\n\n".join(
+            f"- {str(c.author_name or c.author_account_id or 'Unknown')}: {str(c.body or '').strip()}"
+            for c in comment_rows
+            if str(c.body or "").strip()
+        )
+        desc_parts = [f"# {ji.jira_key}: {ji.summary or ji.jira_key}", ""]
+        if (ji.description or "").strip():
+            desc_parts.extend(["## Description", (ji.description or "").strip(), ""])
+        if comment_text:
+            desc_parts.extend(["## Jira comments", comment_text, ""])
+        signals = extract_match_signals(ji.payload if isinstance(ji.payload, dict) else {}, ji.labels or [])
+        match = match_signals(signals, match_maps)
+        feature_uuid = None
+        if match.status == "matched" and match.feature_id:
+            feature_uuid = UUID(match.feature_id)
+            auto_linked_count += 1
+        elif match.status == "conflict":
+            conflict_count += 1
+        else:
+            unlinked_count += 1
         story = UserStory(
             id=uuid4(),
             project_id=project_id,
             title=ji.summary or ji.jira_key,
-            description=ji.description or "",
+            description="\n".join(desc_parts).strip(),
             status=UserStoryStatus.active,
             version=1,
             prev_version_id=None,
@@ -550,6 +618,7 @@ def jira_import_to_portal(
             updated_at=datetime.now(UTC),
             owner_user_id=current_user.id,
             sprint_id=sprint_uuid,
+            feature_id=feature_uuid,
             external_id=ji.jira_id,
             external_source="jira",
             external_url=None,
@@ -557,10 +626,21 @@ def jira_import_to_portal(
             last_synced_at=datetime.now(UTC),
         )
         _store.save_user_story(story.model_dump(mode="json"))
+        if match.status == "conflict":
+            record_conflict(_store, project_id=project_id, story_id=str(story.id), result=match)
+        elif match.status == "matched":
+            _store.clear_feature_match_conflict(project_id, str(story.id))
+            _bootstrap_seed_if_empty(_store, feature_uuid, current_user.id)
         ji.portal_story_id = str(story.id)
         imported_stories.append(str(story.id))
     db.commit()
-    return {"imported_sprint_ids": imported_sprints, "imported_story_ids": imported_stories}
+    return {
+        "imported_sprint_ids": imported_sprints,
+        "imported_story_ids": imported_stories,
+        "auto_linked_count": auto_linked_count,
+        "unlinked_count": unlinked_count,
+        "conflict_count": conflict_count,
+    }
 
 
 # ---- GitHub ---------------------------------------------------------------

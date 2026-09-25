@@ -1,6 +1,6 @@
 # Cursor AI Workflow Modes
 
-This folder defines five specialized AI operating profiles for working on the Salesforce QA Automation platform. Each mode is a focused `.mdc` rule with `alwaysApply: false`, so none of them pollute the context until you explicitly invoke them.
+This folder defines specialized AI operating profiles for working on the Salesforce QA Automation platform. Each mode is a focused `.mdc` rule with `alwaysApply: false`, so none of them pollute the context until you explicitly invoke them.
 
 Invoke a mode by `@`-mentioning the rule filename in chat:
 
@@ -10,6 +10,7 @@ Invoke a mode by `@`-mentioning the rule filename in chat:
 @auditor ...
 @ux ...
 @debug ...
+@feature-memory ...
 ```
 
 Modes are composable: ask `@architect` to plan, then `@caveman` to implement, then `@debug` if something breaks.
@@ -25,6 +26,7 @@ Modes are composable: ask `@architect` to plan, then `@caveman` to implement, th
 | `@auditor` | Gap detection: dead buttons, orphan endpoints, contract drift | **Agent** | **GPT 5.3 Codex** (fallback: Claude Opus 4.7 for complex contract drift) | Audit report |
 | `@ux` | Navigation, hierarchy, flow simplification, dashboard coherence | **Ask** or **Agent** | **Claude Opus 4.7** | UX review / storyboard |
 | `@debug` | Root-cause debugging, async / MCP / browser / pipeline failures | **Agent** | **GPT 5.3 Codex** (fallback: Claude Opus 4.7) | Diagnosis + minimal fix |
+| `@feature-memory` | Grounded Feature Memory QA: no hallucinated SF facts; CLI over inventing APIs | **Agent** | Any capable coding model | CLI-driven workflow |
 
 ---
 
@@ -49,6 +51,10 @@ Modes are composable: ask `@architect` to plan, then `@caveman` to implement, th
 ### `@debug`
 - **Use when:** a failure resists a one-shot fix, especially around async, MCP, browser automation, or the generation pipeline.
 - **Do not use when:** the fix is obvious from the stack trace. `@caveman` will ship it faster.
+
+### `@feature-memory`
+- **Use when:** generating grounded test cases from Jira stories via Feature Memory, editing memory, or reviewing analysis deltas in the IDE (backend-only).
+- **Do not use when:** building Robot scripts or running executions — that is phase 2 — or when the task is general portal plumbing (`@caveman` / `@auditor`).
 
 ---
 

@@ -30,6 +30,9 @@ class UserStory(BaseModel):
     # backlog (sprint_id = None). Existing rows pre-date this field, so
     # the default keeps them valid without migration.
     sprint_id: UUID | None = None
+    # Feature hierarchy (Feature Knowledge Brain). Optional so legacy
+    # records keep validating until explicitly linked.
+    feature_id: UUID | None = None
     # External-system passthrough fields (future Jira / Azure DevOps).
     # Today these stay null; the local-only flow never reads or writes
     # them. See `models/sprint.py` for the rationale.

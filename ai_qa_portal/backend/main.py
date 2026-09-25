@@ -26,6 +26,7 @@ from .routers import (
     admin,
     analytics,
     catalog,
+    features,
     generate,
     heal,
     imports as imports_router,
@@ -118,6 +119,7 @@ app.include_router(analytics.router)
 app.include_router(locators.router)
 app.include_router(sprints.router)
 app.include_router(user_stories.router)
+app.include_router(features.router)
 app.include_router(test_cases.router)
 app.include_router(tags.router)
 app.include_router(llm.router)

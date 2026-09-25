@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from datetime import UTC, datetime
 from pathlib import Path
 import re
@@ -22,8 +23,16 @@ from ai_qa_portal.backend.services.db import AuditLog, User, get_db, get_user_by
 from ai_qa_portal.backend.services.rag_index import index_test_case, index_user_story
 from ai_qa_portal.backend.services.test_case_generator import TestCaseGenerator
 from ai_qa_portal.backend.services.test_case_script_builder import TestCaseScriptBuilder
+from ai_qa_portal.backend.services.feature_memory import (
+    build_grounded_context,
+    create_delta,
+    load_feature_memory,
+    parse_json_object,
+)
+from ai_qa_portal.backend.services.prompt_seeds import read_seed_body
 from ai_qa_portal.backend.storage.json_file_backend import JsonFileBackend
 
+from ..models.feature import FeatureMemoryFact
 from ..models.test_case import TestCase, TestCaseStatus
 from ..models.user_story import UserStory, UserStoryCreate, UserStoryStatus, UserStoryUpdate
 
@@ -37,6 +46,14 @@ router = APIRouter(
     tags=["user_stories"],
     dependencies=[Depends(get_current_user)],
 )
+
+
+class StoryAnalyzeResponse(BaseModel):
+    story_id: str
+    feature_id: str
+    analysis_markdown: str
+    delta_id: str
+    facts_proposed: int
 
 
 def _user_can_see_story(story: UserStory, user: User) -> bool:
@@ -54,6 +71,12 @@ def _load_story_or_404(story_id: UUID, user: User) -> UserStory:
     if not _user_can_see_story(story, user):
         raise HTTPException(404, "User story not found")
     return story
+
+
+def _story_key(story: UserStory) -> str:
+    payload = story.external_payload or {}
+    key = str(payload.get("key") or story.external_id or "").strip()
+    return key or str(story.id)
 
 
 @router.post("", response_model=UserStory, status_code=201)
@@ -308,11 +331,44 @@ async def generate_test_cases(
     story = _load_story_or_404(story_id, current_user)
     generator = TestCaseGenerator()
     slug = slug_for_project_id(story.project_id)
+    grounded_context = None
+    disable_rag = False
+    disable_catalog = False
+    grounded_system = None
+    if story.feature_id:
+        analysis_blob = _store.read(f"story_analysis:{story.id}")
+        if str(analysis_blob.get("feature_id") or "") != str(story.feature_id):
+            raise HTTPException(
+                409,
+                "Story is linked to a feature but has no current analysis. Run POST /user-stories/{id}/analyze first.",
+            )
+        memory = load_feature_memory(_store, story.feature_id)
+        related = [
+            UserStory.model_validate(r)
+            for r in _store.get_user_stories_by_feature(story.feature_id)
+            if str(r.get("id")) != str(story.id)
+        ]
+        grounded_context = build_grounded_context(
+            story=story,
+            memory=memory,
+            related_stories=related,
+            analysis_text=str(analysis_blob.get("analysis_markdown") or ""),
+        )
+        disable_rag = True
+        disable_catalog = True
+        try:
+            grounded_system = read_seed_body("grounded_test_case_drafter.md")
+        except FileNotFoundError:
+            grounded_system = None
     generated, provenance = await generator.generate_with_provenance(
         story,
         db=db,
         project_slug=slug,
         user_id=str(current_user.id) if getattr(current_user, "id", None) else None,
+        grounded_context=grounded_context,
+        disable_rag=disable_rag,
+        disable_catalog=disable_catalog,
+        system_prompt_override=grounded_system if story.feature_id else None,
     )
     now = datetime.now(UTC)
     created: list[dict] = []
@@ -405,6 +461,89 @@ async def generate_test_cases(
             "warnings": provenance.warnings,
         },
     }
+
+
+@router.post("/{story_id}/analyze", response_model=StoryAnalyzeResponse)
+async def analyze_story(
+    story_id: UUID,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    story = _load_story_or_404(story_id, current_user)
+    if not story.feature_id:
+        raise HTTPException(409, "Story is not linked to a feature")
+    memory = load_feature_memory(_store, story.feature_id)
+    related = [
+        UserStory.model_validate(r)
+        for r in _store.get_user_stories_by_feature(story.feature_id)
+        if str(r.get("id")) != str(story.id)
+    ]
+    context = build_grounded_context(story=story, memory=memory, related_stories=related, analysis_text=None)
+    try:
+        system_prompt = read_seed_body("grounded_requirement_analyzer.md")
+    except FileNotFoundError:
+        system_prompt = (
+            "You are a senior Salesforce QA analyst. Use ONLY provided facts. "
+            "Return ONLY JSON with analysis_markdown and proposed_facts."
+        )
+    user_prompt = (
+        f"{context}\n\n"
+        "Generate concise requirement analysis with sections: Goal, In scope, Out of scope, "
+        "Assumptions, Risks, Clarifications needed."
+    )
+    from ai_bridge import call_llm_with_metadata
+
+    llm_result = await asyncio.to_thread(call_llm_with_metadata, system_prompt, user_prompt)
+    parsed = parse_json_object(llm_result.text)
+    analysis_md = str(parsed.get("analysis_markdown") or "").strip()
+    raw_facts = parsed.get("proposed_facts") or []
+    story_key = _story_key(story)
+    now = datetime.now(UTC)
+    facts: list[FeatureMemoryFact] = []
+    for item in raw_facts:
+        if not isinstance(item, dict):
+            continue
+        section = str(item.get("section") or "").strip().lower().replace(" ", "_")
+        text = str(item.get("text") or "").strip()
+        if not section or not text:
+            continue
+        facts.append(
+            FeatureMemoryFact(
+                id=str(uuid4()),
+                section=section,
+                text=text,
+                source_kind="analysis",
+                source_story_keys=[story_key],
+                source_note=None,
+                created_at=now,
+                updated_at=now,
+            ),
+        )
+    delta = create_delta(
+        _store,
+        feature_id=story.feature_id,
+        story_id=story.id,
+        source="analysis",
+        facts=facts,
+        notes=analysis_md[:4000],
+    )
+    _store.write(
+        f"story_analysis:{story.id}",
+        {
+            "story_id": str(story.id),
+            "feature_id": str(story.feature_id),
+            "analysis_markdown": analysis_md,
+            "delta_id": delta.id,
+            "updated_at": datetime.now(UTC).isoformat(),
+        },
+    )
+    return StoryAnalyzeResponse(
+        story_id=str(story.id),
+        feature_id=str(story.feature_id),
+        analysis_markdown=analysis_md,
+        delta_id=delta.id,
+        facts_proposed=len(facts),
+    )
 
 
 @router.post("/{story_id}/build-scripts")

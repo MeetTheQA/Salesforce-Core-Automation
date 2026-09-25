@@ -72,6 +72,10 @@ class TestCaseGenerator:
         project_slug: str | None = None,
         user_id: str | None = None,
         qa_mode: str = "salesforce",
+        grounded_context: str | None = None,
+        disable_rag: bool = False,
+        disable_catalog: bool = False,
+        system_prompt_override: str | None = None,
     ) -> tuple[list[GeneratedTestCase], GenerationProvenance]:
         """Draft test cases AND return prompt + LLM provenance so the
         router can stamp ``prompt_version_id`` / ``model_name`` etc.
@@ -89,16 +93,24 @@ class TestCaseGenerator:
             user_id=user_id,
             project_id=str(user_story.project_id) if getattr(user_story, "project_id", None) else None,
         )
-        system_prompt = assembled.text
-        output_format = assembled.output_format or "json_array"
+        system_prompt = (system_prompt_override or "").strip() or assembled.text
+        output_format = "json_array" if system_prompt_override else (assembled.output_format or "json_array")
 
-        user_body = (
-            f"User story title: {user_story.title}\n\n"
-            f"Description:\n{user_story.description}\n\n"
-            f"QA Mode: {qa_mode}\n"
-        )
+        if grounded_context:
+            user_body = (
+                "Grounded generation mode is enabled.\n"
+                "You MUST use only the provided context.\n\n"
+                f"{grounded_context.strip()}\n\n"
+                f"QA Mode: {qa_mode}\n"
+            )
+        else:
+            user_body = (
+                f"User story title: {user_story.title}\n\n"
+                f"Description:\n{user_story.description}\n\n"
+                f"QA Mode: {qa_mode}\n"
+            )
         rag_block = ""
-        if db is not None and project_slug:
+        if (not disable_rag) and db is not None and project_slug:
             try:
                 from .rag_retrieval import format_passages_block, retrieve
                 passages = retrieve(
@@ -114,14 +126,18 @@ class TestCaseGenerator:
                 # Drafter should never block on a retrieval miss.
                 rag_block = ""
 
-        # Drafter gets just the keyword names -- enough to anchor steps
-        # to real capabilities without spending tokens on full signatures.
-        user_prompt = assembler.build_user_prompt_with_catalog(
-            user_body,
-            include_full_catalog=False,
-            catalog_section_title="Available keyword names (for reference)",
-            rag_context=rag_block,
-        )
+        if disable_catalog:
+            context_block = f"{rag_block}\n\n" if rag_block else ""
+            user_prompt = f"{context_block}## User request\n\n{user_body.strip()}\n"
+        else:
+            # Drafter gets just the keyword names -- enough to anchor steps
+            # to real capabilities without spending tokens on full signatures.
+            user_prompt = assembler.build_user_prompt_with_catalog(
+                user_body,
+                include_full_catalog=False,
+                catalog_section_title="Available keyword names (for reference)",
+                rag_context=rag_block,
+            )
 
         llm_result = await asyncio.to_thread(
             call_llm_with_metadata, system_prompt, user_prompt,
