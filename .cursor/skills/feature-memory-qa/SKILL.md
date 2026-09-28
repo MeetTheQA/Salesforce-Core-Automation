@@ -27,6 +27,7 @@ Runs need Salesforce org/persona: `--org` / `--persona` or env
 `FEATURE_MEMORY_ORG_ID` / `FEATURE_MEMORY_PERSONA_ID`.
 
 Read [`reference.md`](reference.md) for endpoints. Copy patterns from [`examples.md`](examples.md).
+Human QA test cheat sheet: [`docs/IDE_QA_TEST_RUNBOOK.md`](../../docs/IDE_QA_TEST_RUNBOOK.md).
 
 ## Mandatory sequence (fail closed)
 

@@ -4,7 +4,7 @@
 
 Primary path: Cursor (or VS Code) + FastAPI on `localhost:8000` + [`scripts/feature_memory/cli.py`](scripts/feature_memory/cli.py).
 
-Full runbook: [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md). Agent rules: [`AGENTS.md`](AGENTS.md). Skill: `@feature-memory`.
+Full runbook: [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md). **Test commands:** [`docs/IDE_QA_TEST_RUNBOOK.md`](docs/IDE_QA_TEST_RUNBOOK.md). Agent rules: [`AGENTS.md`](AGENTS.md). Skill: `@feature-memory`.
 
 ---
 
@@ -103,12 +103,14 @@ Postgres + FastAPI on `:8000`. See [`DEPLOY.md`](DEPLOY.md) for Fly.io.
 | `Saved_Projects/` | Generated `.robot` suites and project data |
 | `Results/` | Robot run artifacts (also served at `/results`) |
 | `docs/IDE_FEATURE_MEMORY.md` | Human IDE runbook |
+| `docs/IDE_QA_TEST_RUNBOOK.md` | Common commands + best test process |
 
 ---
 
 ## Docs
 
 - [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md) — IDE pilot
+- [`docs/IDE_QA_TEST_RUNBOOK.md`](docs/IDE_QA_TEST_RUNBOOK.md) — commands + E2E test loop
 - [`docs/jira-integration.md`](docs/jira-integration.md) — Jira (optional)
 - [`docs/cursor-sdk-integration.md`](docs/cursor-sdk-integration.md) — Cursor LLM
 - [`DEPLOY.md`](DEPLOY.md) — backend deploy

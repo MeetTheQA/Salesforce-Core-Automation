@@ -64,6 +64,8 @@ Follow root [`AGENTS.md`](../AGENTS.md): use the skill playbook and `scripts/fea
 
 Full detail: [`.cursor/skills/feature-memory-qa/SKILL.md`](../.cursor/skills/feature-memory-qa/SKILL.md).
 
+**Commands + best test process (cheat sheet):** [`IDE_QA_TEST_RUNBOOK.md`](IDE_QA_TEST_RUNBOOK.md).
+
 ## Manual smoke checklist
 
 - [ ] Backend starts with `start-backend.ps1`
@@ -73,3 +75,5 @@ Full detail: [`.cursor/skills/feature-memory-qa/SKILL.md`](../.cursor/skills/fea
 - [ ] `cases list` shows numbered indexes; `cases approve --all` then `scripts build` succeeds
 - [ ] `scripts show --index 1` returns path + content
 - [ ] `runs case` / `runs story` require org (or env) and do not invent UUIDs
+
+See the full checklist and copy-paste commands in [`IDE_QA_TEST_RUNBOOK.md`](IDE_QA_TEST_RUNBOOK.md).

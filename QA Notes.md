@@ -21,7 +21,7 @@ Use the **QA** branch for shared test automation work aligned with your team’s
 
 **Salesforce Core Automation (IDE)** — a **FastAPI** backend (`ai_qa_portal/backend/`) plus **Robot Framework** assets for **Salesforce**, driven from the IDE via the Feature Memory CLI (`scripts/feature_memory/cli.py`). There is no browser portal. QAs describe work in Cursor; agents call the CLI for Feature Memory, grounded test cases, script build, and runs. LLM providers: Gemini / OpenAI / Anthropic / Groq / Cursor SDK / Ollama (failover). Runs need a Salesforce **sandbox** org + persona (credentials stored by the backend — not committed to git).
 
-See [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md) and [`AGENTS.md`](AGENTS.md).
+See [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md), [`docs/IDE_QA_TEST_RUNBOOK.md`](docs/IDE_QA_TEST_RUNBOOK.md), and [`AGENTS.md`](AGENTS.md).
 
 ---
 

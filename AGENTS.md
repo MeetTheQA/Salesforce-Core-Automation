@@ -14,6 +14,7 @@ For Feature Memory, Jira→feature linking, analysis deltas, grounded test-case 
 6. Map “TC N” with `cases list` + `--index N`. Runs need `--org`/`--persona` or `FEATURE_MEMORY_ORG_ID` / `FEATURE_MEMORY_PERSONA_ID`.
 
 Human runbook: [`docs/IDE_FEATURE_MEMORY.md`](docs/IDE_FEATURE_MEMORY.md).
+Test commands / best process: [`docs/IDE_QA_TEST_RUNBOOK.md`](docs/IDE_QA_TEST_RUNBOOK.md).
 
 Cursor shorthand: `@feature-memory`.
 
